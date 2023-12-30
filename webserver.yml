@@ -1,0 +1,43 @@
+---
+- name: Web Server Setup
+  hosts: webservers
+  become: yes
+  vars_files:
+    - /home/ansible/confidential
+
+  tasks:
+    - name: Httpd Setup
+      package:
+        name: httpd
+        state: present
+      notify: httpd service
+      tags:
+        - base-install
+    - name: Configure Virtual HOST
+      template:
+        src: /home/ansible/vhost.conf.j2
+        dest: /etc/httpd/conf.d/vhost.conf
+      notify: httpd service
+      tags:
+        - vhost
+    - name: Configure site authentication
+      template:
+        src: /home/ansible/htpasswd.j2
+        dest: /etc/httpd/conf/htpasswd
+      notify: httpd service
+      tags:
+        - vhost
+    - name: Run data job
+      command: /opt/data-job.sh
+      async: 600
+      poll: 0
+      tags:
+        - data-job
+
+  handlers:
+    - name: Start and Enable Httpd
+      service:
+        name: httpd
+        state: restarted
+        enabled: yes
+      listen: httpd service
